@@ -1,0 +1,95 @@
+services:
+  mysql-server:
+    image: mysql:9
+    container_name: mysql-server
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 12345
+    restart: unless-stopped
+    volumes:
+      - mysql-docker22:/var/lib/mysql
+    networks:
+      - net-mysql
+
+  mysql-client:
+    image: phpmyadmin
+    container_name: mysql-client
+    ports:
+      - 8080:80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      PMA_HOST: mysql-server
+      PMA_USER: user
+      PMA_PASSWORD: 12345
+    depends_on:
+      mysql-server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - net-mysql
+
+  backend:
+    image: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - 5000:3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    environment:
+      DB_HOST: mysql-server
+      DB_USERNAME: user
+      DB_PASSWORD: 12345
+      DB_DATABASE: db
+    depends_on:
+      mysql-server:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - net-mysql
+
+  frontend:
+    image: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - 4200:80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - net-mysql
+
+volumes:
+  mysql-docker22:
+    driver: local
+    name: mysql-docker22
+
+networks:
+  net-mysql:
+    driver: bridge
+    name: net-mysql
