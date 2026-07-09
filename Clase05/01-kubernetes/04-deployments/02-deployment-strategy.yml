@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    env: dev
+    app: frontend
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 3
+      maxUnavailable: 2
+  selector:
+    matchLabels:
+      env: dev
+      app: frontend
+  template:
+    metadata:
+      labels:
+        env: dev
+        app: frontend
+    spec:
+      containers:
+        - name: web
+          image: python:3.6-alpine
+          command:
+            [
+              "sh",
+              "-c",
+              "echo 'Home from Python container' > index.html && python -m http.server 9000",
+            ]
