@@ -13,10 +13,37 @@ openssl req -new -key course22.key -out course22.csr -subj "/CN=course22/O=devel
 MSYS_NO_PATHCONV=1 openssl req -new -key course22.key -out course22.csr -subj "/CN=course22/O=developers"
 ```
 
-### Generar certificado final
+### Extraer la configuración del cluster docker-desktop
 
 ```bash
-openssl x509 -req -in course22.csr -CA \\wsl.localhost\docker-desktop\tmp\docker-desktop-root\run\config\pki\ca.crt -CAkey \\wsl.localhost\docker-desktop\tmp\docker-desktop-root\run\config\pki\ca.key -CAcreateserial -out course22.crt --days 365
+kubectl config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 --decode > k8s-ca.crt
 ```
 
-openssl x509 -req -in course22.csr -CA \\wsl$\docker-desktop\mnt\host\c\ProgramData\DockerDesktop\pki\ca.crt -CAkey \\wsl$\docker-desktop\mnt\host\c\ProgramData\DockerDesktop\pki\ca.key -CAcreateserial -out course22.crt --days 365
+### Convertir csr a base64
+
+```bash
+cat course22.csr | base64 | tr -d '\n'
+```
+
+### Generar el request
+
+- Crear el manifiesto csr-request.yml
+- Reemplazar el valor del campo request por el generado en el paso anterior
+
+### Aplicar el manifiesto
+
+```bash
+kubectl apply -f csr-request.yml
+```
+
+### Aprobar la solicitud
+
+```bash
+kubectl certificate approve my-csr
+```
+
+### Descargar el certificado firmado (.crt)
+
+```bash
+kubectl get csr my-csr -o jsonpath='{.status.certificate}' | base64 --decode > course22.crt
+```
